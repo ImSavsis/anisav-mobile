@@ -1,0 +1,40 @@
+name: ios-unsigned
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx expo prebuild --platform ios --no-install
+      - run: cd ios && pod install
+      - name: detect scheme
+        id: scheme
+        run: |
+          cd ios
+          NAME=$(xcodebuild -workspace *.xcworkspace -list | awk '/Schemes:/{getline; print; exit}' | xargs)
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+      - name: build unsigned .app
+        run: |
+          cd ios
+          xcodebuild -workspace *.xcworkspace -scheme "${{ steps.scheme.outputs.name }}" -configuration Release \
+            -sdk iphoneos -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+      - name: package ipa
+        run: |
+          cd ios/build/Build/Products/Release-iphoneos
+          mkdir Payload
+          cp -r *.app Payload/
+          zip -r AniSav.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AniSav-unsigned
+          path: ios/build/Build/Products/Release-iphoneos/AniSav.ipa
