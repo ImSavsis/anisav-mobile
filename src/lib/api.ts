@@ -2,6 +2,7 @@ import type {
   CatalogFilters,
   CatalogResponse,
   CollectionType,
+  Episode,
   Genre,
   HistoryItem,
   Release,
@@ -57,6 +58,9 @@ export const api = {
     req<CatalogResponse>(`/anime/genres/${genreId}/releases?page=${page}&limit=${limit}`),
 
   release: (idOrAlias: string | number) => req<Release>(`/anime/releases/${idOrAlias}`),
+
+  episode: (releaseEpisodeId: string) =>
+    req<Episode & { release: Release }>(`/anime/releases/episodes/${releaseEpisodeId}`),
 
   search: (query: string) =>
     req<Release[]>(`/app/search/releases?query=${encodeURIComponent(query)}`),

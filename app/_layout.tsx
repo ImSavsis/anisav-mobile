@@ -13,7 +13,18 @@ export default function RootLayout() {
           <StatusBar style="light" />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="title/[id]" options={{ presentation: 'card' }} />
+            <Stack.Screen
+              name="title/[id]"
+              options={{
+                presentation: 'card',
+                headerShown: true,
+                headerTitle: '',
+                headerBackTitle: '',
+                headerStyle: { backgroundColor: colors.background },
+                headerTintColor: colors.text,
+                headerShadowVisible: false,
+              }}
+            />
             <Stack.Screen name="login" options={{ presentation: 'modal' }} />
           </Stack>
         </AuthProvider>

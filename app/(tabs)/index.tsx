@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Animated, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Animated, FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api, imageUrl } from '../../src/lib/api'
+import { getContinueWatching, ContinueWatchingItem } from '../../src/lib/continueWatching'
 import type { Release, ScheduleDay } from '../../src/lib/types'
 import { colors, radius, spacing } from '../../src/lib/theme'
 import Row from '../../src/components/Row'
@@ -15,20 +16,23 @@ export default function HomeScreen() {
   const [latest, setLatest] = useState<Release[] | null>(null)
   const [recommended, setRecommended] = useState<Release[]>([])
   const [today, setToday] = useState<ScheduleDay[]>([])
+  const [continueWatching, setContinueWatching] = useState<ContinueWatchingItem[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const heroOpacity = useRef(new Animated.Value(0)).current
   const heroTranslate = useRef(new Animated.Value(16)).current
   const buttonScale = useRef(new Animated.Value(1)).current
 
   const load = useCallback(async () => {
-    const [latestRes, recommendedRes, scheduleRes] = await Promise.all([
+    const [latestRes, recommendedRes, scheduleRes, continueRes] = await Promise.all([
       api.latest(21).catch(() => [] as Release[]),
       api.recommended(14).catch(() => [] as Release[]),
       api.scheduleNow().catch(() => null),
+      getContinueWatching().catch(() => [] as ContinueWatchingItem[]),
     ])
     setLatest(latestRes)
     setRecommended(recommendedRes)
     setToday(scheduleRes?.today?.filter((s) => s.release) ?? [])
+    setContinueWatching(continueRes)
   }, [])
 
   useEffect(() => {
@@ -114,6 +118,46 @@ export default function HomeScreen() {
         </Animated.View>
       )}
 
+      {continueWatching.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Продолжить просмотр</Text>
+          <FlatList
+            data={continueWatching}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.episode.id}
+            contentContainerStyle={{ paddingHorizontal: spacing(4), gap: spacing(3) }}
+            renderItem={({ item }) => (
+              <Pressable
+                style={styles.continueCard}
+                onPress={() => router.push(`/title/${item.release.alias || item.release.id}`)}
+              >
+                <Image
+                  source={{
+                    uri: imageUrl(item.release.poster?.optimized?.preview || item.release.poster?.preview),
+                  }}
+                  style={styles.continueImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.continueOverlay}>
+                  <Text style={styles.continueEpisode}>Серия {item.episode.ordinal}</Text>
+                  {!!item.episode.duration && (
+                    <View style={styles.continueBarTrack}>
+                      <View
+                        style={[
+                          styles.continueBarFill,
+                          { width: `${Math.min(100, (item.time / item.episode.duration) * 100)}%` },
+                        ]}
+                      />
+                    </View>
+                  )}
+                </View>
+              </Pressable>
+            )}
+          />
+        </View>
+      )}
+
       <Row title="Онгоинги сегодня" releases={today.map((s) => s.release)} />
       <Row title="Последние обновления" releases={latest} />
       <Row title="Рекомендуем" releases={recommended} />
@@ -127,6 +171,48 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  section: {
+    marginTop: spacing(5),
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: spacing(3),
+    paddingHorizontal: spacing(4),
+  },
+  continueCard: {
+    width: 110,
+  },
+  continueImage: {
+    width: 110,
+    height: 165,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceCard,
+  },
+  continueOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: spacing(2),
+  },
+  continueEpisode: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: spacing(1),
+  },
+  continueBarTrack: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    overflow: 'hidden',
+  },
+  continueBarFill: {
+    height: '100%',
+    backgroundColor: colors.accent,
   },
   hero: {
     width: '100%',

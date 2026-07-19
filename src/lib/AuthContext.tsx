@@ -50,9 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function logout() {
     try {
       await api.logout()
-    } catch {
-      // best-effort
-    }
+    } catch {}
     await clearToken()
     setUser(null)
   }
