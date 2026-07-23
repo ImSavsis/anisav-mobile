@@ -13,4 +13,11 @@ npm install
 npx expo start
 ```
 
+## билды
+
+- ios: `.github/workflows/ios-unsigned.yml`, unsigned ipa, гоняй через AltStore/SideStore
+- android: `.github/workflows/android-release.yml`, release apk (подписан дебаг-ключом, для сайдлоада ок), просто ставь и запускай
+
+обе кнопкой в Actions или смотри в [Releases](https://github.com/ImSavsis/anisav-mobile/releases)
+
 сделано im.savsis.xyz
