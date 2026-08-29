@@ -3,7 +3,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api } from '../../src/lib/api'
 import type { Release, ScheduleDay } from '../../src/lib/types'
-import { colors, spacing } from '../../src/lib/theme'
+import { colors, font, spacing } from '../../src/lib/theme'
 import Loader from '../../src/components/Loader'
 import Row from '../../src/components/Row'
 
@@ -47,7 +47,7 @@ export default function ScheduleScreen() {
       style={styles.screen}
       contentContainerStyle={{
         paddingTop: insets.top + spacing(4),
-        paddingBottom: insets.bottom + spacing(8),
+        paddingBottom: insets.bottom + spacing(24),
       }}
       refreshControl={
         <RefreshControl tintColor={colors.accent} refreshing={refreshing} onRefresh={onRefresh} />
@@ -75,8 +75,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
+    fontFamily: font.display,
     fontSize: 22,
-    fontWeight: '800',
+    letterSpacing: -0.3,
     paddingHorizontal: spacing(4),
   },
 })

@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
+import { BlurView } from 'expo-blur'
 import { useEvent, useEventListener } from 'expo'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import type { Episode, EpisodeSkip } from '../lib/types'
-import { colors, radius, spacing } from '../lib/theme'
+import { colors, font, radius, spacing } from '../lib/theme'
 import { loadPlayerPrefs, savePlayerPrefs, PlayerPrefs } from '../lib/playerPrefs'
+import AnimatedPressable from './AnimatedPressable'
+import AccentGradient from './AccentGradient'
 
 const QUALITIES = [
   { key: 'hls_1080', label: '1080p' },
@@ -130,26 +133,26 @@ export default function Player({ episode, resumeAt, onProgress, onEnded }: Playe
       )}
 
       {showSkip && (
-        <Pressable onPress={skip} style={styles.skipButton}>
-          <Ionicons name="play-skip-forward" size={14} color={colors.text} />
-          <Text style={styles.skipText}>
-            Пропустить {showSkip === 'opening' ? 'опенинг' : 'эндинг'}
-          </Text>
-        </Pressable>
+        <View style={styles.skipButtonWrap}>
+          <AnimatedPressable haptic onPress={skip} scaleTo={0.95} style={styles.skipButtonInner}>
+            <BlurView intensity={40} tint="dark" style={styles.skipButtonBlur}>
+              <Ionicons name="play-skip-forward" size={14} color={colors.text} />
+              <Text style={styles.skipText}>Пропустить {showSkip === 'opening' ? 'опенинг' : 'эндинг'}</Text>
+            </BlurView>
+          </AnimatedPressable>
+        </View>
       )}
 
-      <Pressable
-        hitSlop={10}
-        onPress={() => setShowSettings((v) => !v)}
-        style={styles.gearButton}
-      >
-        <Ionicons name="settings-sharp" size={16} color={colors.text} />
-      </Pressable>
+      <View style={styles.gearButtonWrap}>
+        <AnimatedPressable hitSlop={10} onPress={() => setShowSettings((v) => !v)} scaleTo={0.9} style={styles.gearButton}>
+          <Ionicons name="settings-sharp" size={16} color={colors.text} />
+        </AnimatedPressable>
+      </View>
 
       {showSettings && (
         <>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowSettings(false)} />
-          <View style={styles.settingsPanel}>
+          <BlurView intensity={50} tint="dark" style={styles.settingsPanel}>
             {available.length > 1 && (
               <View style={styles.settingsRow}>
                 <Text style={styles.settingsLabel}>Качество</Text>
@@ -158,9 +161,15 @@ export default function Player({ episode, resumeAt, onProgress, onEnded }: Playe
                     <Pressable
                       key={q.key}
                       onPress={() => selectQuality(q.key)}
-                      style={[styles.qualityChip, quality === q.key && styles.qualityChipActive]}
+                      style={quality === q.key ? undefined : styles.qualityChip}
                     >
-                      <Text style={styles.qualityChipText}>{q.label}</Text>
+                      {quality === q.key ? (
+                        <AccentGradient style={styles.qualityChip}>
+                          <Text style={styles.qualityChipText}>{q.label}</Text>
+                        </AccentGradient>
+                      ) : (
+                        <Text style={styles.qualityChipText}>{q.label}</Text>
+                      )}
                     </Pressable>
                   ))}
                 </View>
@@ -184,7 +193,7 @@ export default function Player({ episode, resumeAt, onProgress, onEnded }: Playe
               value={prefs.autoPlayNext}
               onChange={(v) => updatePrefs({ autoPlayNext: v })}
             />
-          </View>
+          </BlurView>
         </>
       )}
     </View>
@@ -230,27 +239,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  skipButton: {
+  skipButtonWrap: {
     position: 'absolute',
     bottom: spacing(16),
     right: spacing(3),
+  },
+  skipButtonInner: {
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+  },
+  skipButtonBlur: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing(1.5),
-    backgroundColor: colors.overlay,
     paddingHorizontal: spacing(3),
     paddingVertical: spacing(2),
-    borderRadius: radius.sm,
   },
   skipText: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 12,
-    fontWeight: '600',
   },
-  gearButton: {
+  gearButtonWrap: {
     position: 'absolute',
     top: spacing(2),
     right: spacing(2),
+  },
+  gearButton: {
     width: 30,
     height: 30,
     borderRadius: radius.full,
@@ -263,10 +278,10 @@ const styles = StyleSheet.create({
     top: spacing(9),
     right: spacing(2),
     width: 220,
-    backgroundColor: colors.surfaceRaised,
     borderRadius: radius.md,
     padding: spacing(3),
     gap: spacing(2),
+    overflow: 'hidden',
   },
   settingsRow: {
     flexDirection: 'row',
@@ -276,6 +291,7 @@ const styles = StyleSheet.create({
   },
   settingsLabel: {
     color: colors.textDim,
+    fontFamily: font.body,
     fontSize: 12,
     flexShrink: 1,
   },
@@ -289,13 +305,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  qualityChipActive: {
-    backgroundColor: colors.accent,
-  },
   qualityChipText: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 11,
-    fontWeight: '600',
   },
   divider: {
     height: StyleSheet.hairlineWidth,

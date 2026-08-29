@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
-import { colors, spacing } from '../lib/theme'
+import { colors, font, spacing } from '../lib/theme'
 
 interface LoaderProps {
   label?: string
@@ -24,6 +24,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textDim,
+    fontFamily: font.body,
     fontSize: 13,
   },
 })

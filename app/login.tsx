@@ -1,18 +1,12 @@
 import { useState } from 'react'
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native'
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useAuth } from '../src/lib/AuthContext'
-import { colors, radius, spacing } from '../src/lib/theme'
+import { colors, font, radius, spacing } from '../src/lib/theme'
+import AnimatedPressable from '../src/components/AnimatedPressable'
+import AccentGradient from '../src/components/AccentGradient'
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets()
@@ -34,6 +28,8 @@ export default function LoginScreen() {
     }
   }
 
+  const canSubmit = !submitting && !!loginValue.trim() && !!password
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: insets.top + spacing(4) }]}
@@ -49,9 +45,7 @@ export default function LoginScreen() {
 
       <View style={styles.content}>
         <Text style={styles.title}>Вход в AniLiberty</Text>
-        <Text style={styles.subtitle}>
-          Используй логин и пароль своего аккаунта на aniliberty.top
-        </Text>
+        <Text style={styles.subtitle}>Используй логин и пароль своего аккаунта на aniliberty.top</Text>
 
         <View style={styles.form}>
           <TextInput
@@ -84,17 +78,13 @@ export default function LoginScreen() {
 
         {error && <Text style={styles.error}>{error}</Text>}
 
-        <Pressable
-          onPress={onSubmit}
-          disabled={submitting || !loginValue.trim() || !password}
-          style={({ pressed }) => [
-            styles.submitButton,
-            (submitting || !loginValue.trim() || !password) && styles.submitButtonDisabled,
-            pressed && styles.submitButtonPressed,
-          ]}
-        >
-          <Text style={styles.submitText}>{submitting ? '...' : 'Войти'}</Text>
-        </Pressable>
+        <View style={{ marginTop: spacing(6), opacity: canSubmit ? 1 : 0.4 }}>
+          <AnimatedPressable onPress={onSubmit} disabled={!canSubmit} haptic>
+            <AccentGradient style={styles.submitButton}>
+              <Text style={styles.submitText}>{submitting ? '...' : 'Войти'}</Text>
+            </AccentGradient>
+          </AnimatedPressable>
+        </View>
       </View>
     </KeyboardAvoidingView>
   )
@@ -123,12 +113,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 22,
-    fontWeight: '700',
     textAlign: 'center',
   },
   subtitle: {
     color: colors.textFaint,
+    fontFamily: font.regular,
     fontSize: 13,
     textAlign: 'center',
     marginTop: spacing(2),
@@ -146,31 +137,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(3),
     color: colors.text,
+    fontFamily: font.body,
     fontSize: 15,
   },
   error: {
     color: colors.accent,
+    fontFamily: font.body,
     fontSize: 13,
     textAlign: 'center',
     marginTop: spacing(4),
   },
   submitButton: {
-    marginTop: spacing(6),
-    backgroundColor: colors.accent,
     borderRadius: radius.full,
     paddingVertical: spacing(3.5),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  submitButtonPressed: {
-    backgroundColor: colors.accentHover,
-  },
-  submitButtonDisabled: {
-    opacity: 0.4,
-  },
   submitText: {
-    color: colors.text,
+    color: '#fff',
+    fontFamily: font.heading,
     fontSize: 15,
-    fontWeight: '700',
   },
 })

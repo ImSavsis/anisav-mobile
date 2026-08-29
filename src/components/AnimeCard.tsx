@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { Image, StyleSheet, Text, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import type { Release } from '../lib/types'
 import { imageUrl } from '../lib/api'
-import { colors, radius, spacing } from '../lib/theme'
+import { colors, font, radius, spacing } from '../lib/theme'
 import { isInWishlist, onWishlistChange, toggleWishlist } from '../lib/wishlist'
+import AnimatedPressable from './AnimatedPressable'
+import AccentGradient from './AccentGradient'
 
 interface AnimeCardProps {
   release: Release
@@ -13,7 +15,6 @@ interface AnimeCardProps {
 
 export default function AnimeCard({ release, onPress }: AnimeCardProps) {
   const [saved, setSaved] = useState(false)
-  const scale = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
     let mounted = true
@@ -27,14 +28,6 @@ export default function AnimeCard({ release, onPress }: AnimeCardProps) {
     }
   }, [release.id])
 
-  function pressIn() {
-    Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, speed: 50 }).start()
-  }
-
-  function pressOut() {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50 }).start()
-  }
-
   async function handleToggleWishlist() {
     const nowSaved = await toggleWishlist(release)
     setSaved(nowSaved)
@@ -43,41 +36,41 @@ export default function AnimeCard({ release, onPress }: AnimeCardProps) {
   const poster = imageUrl(release.poster?.optimized?.preview || release.poster?.preview)
 
   return (
-    <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
-      <Animated.View style={[styles.container, { transform: [{ scale }] }]}>
-        <View style={styles.posterWrap}>
-          {poster && <Image source={{ uri: poster }} style={styles.poster} resizeMode="cover" />}
+    <AnimatedPressable onPress={onPress} style={styles.container}>
+      <View style={styles.posterWrap}>
+        {poster && <Image source={{ uri: poster }} style={styles.poster} resizeMode="cover" />}
 
-          <View style={styles.topLeftCol}>
-            {release.is_ongoing && (
-              <View style={styles.badgeAccent}>
-                <Text style={styles.badgeText}>ONGOING</Text>
-              </View>
-            )}
-            {release.episodes_total != null && (
-              <View style={styles.badgeMuted}>
-                <Text style={styles.badgeText}>{release.episodes_total} эп.</Text>
-              </View>
-            )}
-          </View>
-
-          <Pressable hitSlop={10} onPress={handleToggleWishlist} style={styles.starButton}>
-            <Ionicons
-              name={saved ? 'star' : 'star-outline'}
-              size={15}
-              color={saved ? colors.accent : colors.text}
-            />
-          </Pressable>
+        <View style={styles.topLeftCol}>
+          {release.is_ongoing && (
+            <AccentGradient style={styles.badge}>
+              <Text style={styles.badgeText}>ONGOING</Text>
+            </AccentGradient>
+          )}
+          {release.episodes_total != null && (
+            <View style={[styles.badge, styles.badgeMuted]}>
+              <Text style={styles.badgeText}>{release.episodes_total} эп.</Text>
+            </View>
+          )}
         </View>
 
-        <Text numberOfLines={2} style={styles.title}>
-          {release.name.main}
-        </Text>
-        <Text numberOfLines={1} style={styles.meta}>
-          {release.season?.description} {release.year} · {release.type?.description}
-        </Text>
-      </Animated.View>
-    </Pressable>
+        <View style={styles.starButtonWrap}>
+          <AnimatedPressable hitSlop={10} onPress={handleToggleWishlist} scaleTo={0.8} haptic style={styles.starButton}>
+            <Ionicons
+              name={saved ? 'star' : 'star-outline'}
+              size={14}
+              color={saved ? colors.accent2 : colors.text}
+            />
+          </AnimatedPressable>
+        </View>
+      </View>
+
+      <Text numberOfLines={2} style={styles.title}>
+        {release.name.main}
+      </Text>
+      <Text numberOfLines={1} style={styles.meta}>
+        {release.season?.description} {release.year} · {release.type?.description}
+      </Text>
+    </AnimatedPressable>
   )
 }
 
@@ -102,30 +95,28 @@ const styles = StyleSheet.create({
     left: spacing(1.5),
     gap: spacing(1),
   },
-  badgeAccent: {
-    backgroundColor: colors.accent,
+  badge: {
     paddingHorizontal: spacing(1.5),
-    paddingVertical: spacing(0.5),
+    paddingVertical: spacing(0.75),
     borderRadius: radius.sm,
     alignSelf: 'flex-start',
   },
   badgeMuted: {
     backgroundColor: colors.overlay,
-    paddingHorizontal: spacing(1.5),
-    paddingVertical: spacing(0.5),
-    borderRadius: radius.sm,
-    alignSelf: 'flex-start',
   },
   badgeText: {
     color: colors.text,
-    fontSize: 9,
-    fontWeight: '700',
+    fontFamily: font.mono,
+    fontSize: 8.5,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  starButton: {
+  starButtonWrap: {
     position: 'absolute',
     top: spacing(1.5),
     right: spacing(1.5),
+  },
+  starButton: {
     width: 26,
     height: 26,
     borderRadius: radius.full,
@@ -136,13 +127,14 @@ const styles = StyleSheet.create({
   title: {
     marginTop: spacing(2),
     color: colors.text,
+    fontFamily: font.medium,
     fontSize: 13,
-    fontWeight: '600',
     lineHeight: 16,
   },
   meta: {
     marginTop: spacing(1),
     color: colors.textFaint,
+    fontFamily: font.regular,
     fontSize: 11,
   },
 })

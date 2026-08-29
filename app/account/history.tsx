@@ -6,8 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { HistoryItem } from '../../src/lib/types'
 import { api, imageUrl } from '../../src/lib/api'
 import { useAuth } from '../../src/lib/AuthContext'
-import { colors, radius, spacing } from '../../src/lib/theme'
+import { colors, font, radius, spacing } from '../../src/lib/theme'
 import Loader from '../../src/components/Loader'
+import Reveal from '../../src/components/Reveal'
+import AnimatedPressable from '../../src/components/AnimatedPressable'
+import AccentGradient from '../../src/components/AccentGradient'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('ru-RU', {
@@ -57,9 +60,11 @@ export default function HistoryScreen() {
       {!authLoading && !user && (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>Войдите, чтобы видеть историю просмотра</Text>
-          <Pressable style={styles.loginButton} onPress={() => router.push('/login')}>
-            <Text style={styles.loginButtonText}>Войти</Text>
-          </Pressable>
+          <AnimatedPressable haptic onPress={() => router.push('/login')}>
+            <AccentGradient style={styles.loginButton}>
+              <Text style={styles.loginButtonText}>Войти</Text>
+            </AccentGradient>
+          </AnimatedPressable>
         </View>
       )}
 
@@ -79,36 +84,36 @@ export default function HistoryScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />
           }
-          renderItem={({ item }) => {
-            const thumb = imageUrl(
-              item.release.poster?.optimized?.thumbnail || item.release.poster?.thumbnail
-            )
+          renderItem={({ item, index }) => {
+            const thumb = imageUrl(item.release.poster?.optimized?.thumbnail || item.release.poster?.thumbnail)
             return (
-              <Pressable
-                style={styles.row}
-                onPress={() => router.push(`/title/${item.release.alias || item.release.id}`)}
-              >
-                {thumb && <Image source={{ uri: thumb }} style={styles.thumb} resizeMode="cover" />}
-                <View style={styles.rowInfo}>
-                  <Text numberOfLines={1} style={styles.rowTitle}>
-                    {item.release.name.main}
-                  </Text>
-                  <Text numberOfLines={1} style={styles.rowMeta}>
-                    Серия {item.release_episode.ordinal}
-                    {item.release_episode.name ? ` — ${item.release_episode.name}` : ''}
-                  </Text>
-                  <Text style={styles.rowDate}>{formatDate(item.updated_at)}</Text>
-                </View>
-                {item.is_watched ? (
-                  <View style={styles.badgeMuted}>
-                    <Text style={styles.badgeMutedText}>Просмотрено</Text>
+              <Reveal index={index % 10}>
+                <AnimatedPressable
+                  style={styles.row}
+                  onPress={() => router.push(`/title/${item.release.alias || item.release.id}`)}
+                >
+                  {thumb && <Image source={{ uri: thumb }} style={styles.thumb} resizeMode="cover" />}
+                  <View style={styles.rowInfo}>
+                    <Text numberOfLines={1} style={styles.rowTitle}>
+                      {item.release.name.main}
+                    </Text>
+                    <Text numberOfLines={1} style={styles.rowMeta}>
+                      Серия {item.release_episode.ordinal}
+                      {item.release_episode.name ? ` — ${item.release_episode.name}` : ''}
+                    </Text>
+                    <Text style={styles.rowDate}>{formatDate(item.updated_at)}</Text>
                   </View>
-                ) : (
-                  <View style={styles.badgeAccent}>
-                    <Text style={styles.badgeAccentText}>В процессе</Text>
-                  </View>
-                )}
-              </Pressable>
+                  {item.is_watched ? (
+                    <View style={styles.badgeMuted}>
+                      <Text style={styles.badgeMutedText}>Просмотрено</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.badgeAccent}>
+                      <Text style={styles.badgeAccentText}>В процессе</Text>
+                    </View>
+                  )}
+                </AnimatedPressable>
+              </Reveal>
             )
           }}
         />
@@ -139,8 +144,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 19,
-    fontWeight: '700',
   },
   empty: {
     flex: 1,
@@ -151,20 +156,20 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: colors.textFaint,
+    fontFamily: font.regular,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
   },
   loginButton: {
-    backgroundColor: colors.accent,
     paddingHorizontal: spacing(6),
     paddingVertical: spacing(3),
     borderRadius: 999,
   },
   loginButtonText: {
-    color: colors.text,
+    color: '#fff',
+    fontFamily: font.heading,
     fontSize: 14,
-    fontWeight: '700',
   },
   list: {
     padding: spacing(4),
@@ -191,16 +196,18 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     color: colors.text,
+    fontFamily: font.medium,
     fontSize: 14,
-    fontWeight: '600',
   },
   rowMeta: {
     color: colors.textFaint,
+    fontFamily: font.regular,
     fontSize: 12,
   },
   rowDate: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontFamily: font.mono,
+    fontSize: 10,
   },
   badgeMuted: {
     backgroundColor: colors.surfaceRaised,
@@ -210,18 +217,18 @@ const styles = StyleSheet.create({
   },
   badgeMutedText: {
     color: colors.textDim,
-    fontSize: 10,
-    fontWeight: '700',
+    fontFamily: font.mono,
+    fontSize: 9,
   },
   badgeAccent: {
-    backgroundColor: 'rgba(254,54,53,0.2)',
+    backgroundColor: colors.accentSoft,
     paddingHorizontal: spacing(2),
     paddingVertical: spacing(1),
     borderRadius: radius.sm,
   },
   badgeAccentText: {
     color: colors.accent,
-    fontSize: 10,
-    fontWeight: '700',
+    fontFamily: font.mono,
+    fontSize: 9,
   },
 })

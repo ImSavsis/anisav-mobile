@@ -16,10 +16,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { api } from '../../src/lib/api'
 import type { CatalogFilters, Genre, Release, ValueDescription } from '../../src/lib/types'
-import { colors, radius, spacing } from '../../src/lib/theme'
+import { colors, font, radius, spacing } from '../../src/lib/theme'
 import AnimeCard from '../../src/components/AnimeCard'
-import Loader from '../../src/components/Loader'
 import Chip from '../../src/components/Chip'
+import Reveal from '../../src/components/Reveal'
+import AnimatedPressable from '../../src/components/AnimatedPressable'
+import AccentGradient from '../../src/components/AccentGradient'
+import { GridSkeleton } from '../../src/components/Skeleton'
 
 type SortOpt = ValueDescription & { label: string }
 
@@ -193,7 +196,7 @@ export default function CatalogScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      <Text style={styles.headerTitle}>{isSearching ? `Поиск: "${debouncedQuery}"` : 'Каталог'}</Text>
+      <Text style={styles.headerTitle}>{isSearching ? `Поиск: «${debouncedQuery}»` : 'Каталог'}</Text>
 
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
@@ -216,7 +219,7 @@ export default function CatalogScreen() {
         </View>
 
         {!isSearching && (
-          <Pressable style={styles.filterButton} onPress={openFilters}>
+          <AnimatedPressable haptic onPress={openFilters} style={styles.filterButton}>
             <Ionicons name="options" size={18} color={colors.text} />
             <Text style={styles.filterButtonText}>Фильтры</Text>
             {activeFilterCount > 0 && (
@@ -224,12 +227,12 @@ export default function CatalogScreen() {
                 <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
               </View>
             )}
-          </Pressable>
+          </AnimatedPressable>
         )}
       </View>
 
       {loading ? (
-        <Loader label="Загрузка..." />
+        <GridSkeleton columns={columns} count={columns * 3} />
       ) : results && results.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Ionicons name="file-tray-outline" size={40} color={colors.textFaint} />
@@ -242,16 +245,18 @@ export default function CatalogScreen() {
           keyExtractor={(item, index) => (item ? String(item.id) : `filler-${index}`)}
           numColumns={columns}
           columnWrapperStyle={styles.row}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + spacing(6) }]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + spacing(24) }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           onEndReachedThreshold={0.4}
           onEndReached={loadMore}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <View style={styles.cardCell}>
               {item && (
-                <AnimeCard release={item} onPress={() => router.push(`/title/${item.alias || item.id}`)} />
+                <Reveal index={index % (columns * 3)}>
+                  <AnimeCard release={item} onPress={() => router.push(`/title/${item.alias || item.id}`)} />
+                </Reveal>
               )}
             </View>
           )}
@@ -330,9 +335,13 @@ export default function CatalogScreen() {
               <Pressable style={styles.resetButton} onPress={resetFilters}>
                 <Text style={styles.resetButtonText}>Сбросить</Text>
               </Pressable>
-              <Pressable style={styles.applyButton} onPress={applyFilters}>
-                <Text style={styles.applyButtonText}>Применить</Text>
-              </Pressable>
+              <View style={{ flex: 1 }}>
+                <AnimatedPressable haptic onPress={applyFilters}>
+                  <AccentGradient style={styles.applyButton}>
+                    <Text style={styles.applyButtonText}>Применить</Text>
+                  </AccentGradient>
+                </AnimatedPressable>
+              </View>
             </View>
           </View>
         </View>
@@ -357,8 +366,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: colors.text,
+    fontFamily: font.display,
     fontSize: 24,
-    fontWeight: '800',
+    letterSpacing: -0.4,
     paddingHorizontal: spacing(4),
     paddingTop: spacing(3),
   },
@@ -383,6 +393,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: colors.text,
+    fontFamily: font.body,
     fontSize: 14,
     padding: 0,
   },
@@ -397,8 +408,8 @@ const styles = StyleSheet.create({
   },
   filterButtonText: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 13,
-    fontWeight: '600',
   },
   filterBadge: {
     backgroundColor: colors.accent,
@@ -411,8 +422,8 @@ const styles = StyleSheet.create({
   },
   filterBadgeText: {
     color: colors.text,
+    fontFamily: font.mono,
     fontSize: 10,
-    fontWeight: '700',
   },
   emptyWrap: {
     flex: 1,
@@ -423,6 +434,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: colors.textFaint,
+    fontFamily: font.body,
     fontSize: 14,
   },
   listContent: {
@@ -468,8 +480,8 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 18,
-    fontWeight: '700',
   },
   sheetBody: {
     marginBottom: spacing(2),
@@ -479,8 +491,9 @@ const styles = StyleSheet.create({
   },
   filterSectionTitle: {
     color: colors.textFaint,
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: font.mono,
+    fontSize: 11,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
     marginBottom: spacing(2),
   },
@@ -506,20 +519,18 @@ const styles = StyleSheet.create({
   },
   resetButtonText: {
     color: colors.textDim,
+    fontFamily: font.heading,
     fontSize: 14,
-    fontWeight: '700',
   },
   applyButton: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     height: 46,
     borderRadius: radius.md,
-    backgroundColor: colors.accent,
   },
   applyButtonText: {
-    color: colors.text,
+    color: '#fff',
+    fontFamily: font.heading,
     fontSize: 14,
-    fontWeight: '700',
   },
 })

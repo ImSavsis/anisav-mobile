@@ -1,13 +1,15 @@
-import { useRef } from 'react'
-import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useAuth } from '../../src/lib/AuthContext'
 import { imageUrl } from '../../src/lib/api'
-import { colors, radius, spacing } from '../../src/lib/theme'
+import { colors, font, radius, spacing } from '../../src/lib/theme'
 import Loader from '../../src/components/Loader'
 import Footer from '../../src/components/Footer'
+import Reveal from '../../src/components/Reveal'
+import AnimatedPressable from '../../src/components/AnimatedPressable'
+import AccentGradient from '../../src/components/AccentGradient'
 
 interface ProfileRowProps {
   icon: keyof typeof Ionicons.glyphMap
@@ -17,51 +19,25 @@ interface ProfileRowProps {
 }
 
 function ProfileRow({ icon, label, onPress, danger }: ProfileRowProps) {
-  const scale = useRef(new Animated.Value(1)).current
-
-  function pressIn() {
-    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50 }).start()
-  }
-
-  function pressOut() {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50 }).start()
-  }
-
   return (
-    <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
-      <Animated.View style={[styles.row, { transform: [{ scale }] }]}>
-        <View style={styles.rowLeft}>
-          <Ionicons name={icon} size={19} color={danger ? colors.accent : colors.textDim} />
-          <Text style={[styles.rowLabel, danger && styles.rowLabelDanger]}>{label}</Text>
-        </View>
-        {!danger && <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />}
-      </Animated.View>
-    </Pressable>
+    <AnimatedPressable onPress={onPress} scaleTo={0.98} style={styles.row}>
+      <View style={styles.rowLeft}>
+        <Ionicons name={icon} size={19} color={danger ? colors.accent : colors.textDim} />
+        <Text style={[styles.rowLabel, danger && styles.rowLabelDanger]}>{label}</Text>
+      </View>
+      {!danger && <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />}
+    </AnimatedPressable>
   )
 }
 
 function LoginButton() {
   const router = useRouter()
-  const scale = useRef(new Animated.Value(1)).current
-
-  function pressIn() {
-    Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, speed: 50 }).start()
-  }
-
-  function pressOut() {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50 }).start()
-  }
-
   return (
-    <Pressable
-      onPress={() => router.push('/login')}
-      onPressIn={pressIn}
-      onPressOut={pressOut}
-    >
-      <Animated.View style={[styles.loginButton, { transform: [{ scale }] }]}>
+    <AnimatedPressable haptic onPress={() => router.push('/login')}>
+      <AccentGradient style={styles.loginButton}>
         <Text style={styles.loginButtonText}>Войти</Text>
-      </Animated.View>
-    </Pressable>
+      </AccentGradient>
+    </AnimatedPressable>
   )
 }
 
@@ -85,23 +61,21 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       style={[styles.container, { paddingTop: insets.top }]}
-      contentContainerStyle={{ paddingBottom: insets.bottom + spacing(6) }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + spacing(24) }}
     >
       <Text style={styles.title}>Профиль</Text>
 
       {user ? (
-        <View style={styles.userHeader}>
+        <Reveal style={styles.userHeader}>
           {avatarUri ? (
             <Image source={{ uri: avatarUri }} style={styles.avatar} />
           ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarFallbackText}>
-                {user.nickname?.[0]?.toUpperCase() ?? '?'}
-              </Text>
-            </View>
+            <AccentGradient style={styles.avatarFallback}>
+              <Text style={styles.avatarFallbackText}>{user.nickname?.[0]?.toUpperCase() ?? '?'}</Text>
+            </AccentGradient>
           )}
           <Text style={styles.nickname}>{user.nickname}</Text>
-        </View>
+        </Reveal>
       ) : (
         <View style={styles.loggedOutWrap}>
           <View style={styles.loggedOutIconCircle}>
@@ -112,28 +86,18 @@ export default function ProfileScreen() {
             Войдите в аккаунт AniLiberty, чтобы синхронизировать избранное, списки и историю
             просмотра между устройствами
           </Text>
-          <LoginButton />
+          <View style={{ marginTop: spacing(5) }}>
+            <LoginButton />
+          </View>
         </View>
       )}
 
       <View style={styles.section}>
-        <ProfileRow
-          icon="star-outline"
-          label="Понравилось"
-          onPress={() => router.push('/wishlist')}
-        />
+        <ProfileRow icon="star-outline" label="Понравилось" onPress={() => router.push('/wishlist')} />
         {user && (
           <>
-            <ProfileRow
-              icon="list-outline"
-              label="Мои списки"
-              onPress={() => router.push('/account/lists')}
-            />
-            <ProfileRow
-              icon="time-outline"
-              label="История"
-              onPress={() => router.push('/account/history')}
-            />
+            <ProfileRow icon="list-outline" label="Мои списки" onPress={() => router.push('/account/lists')} />
+            <ProfileRow icon="time-outline" label="История" onPress={() => router.push('/account/history')} />
           </>
         )}
       </View>
@@ -156,8 +120,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
+    fontFamily: font.display,
     fontSize: 26,
-    fontWeight: '800',
+    letterSpacing: -0.4,
     paddingHorizontal: spacing(4),
     marginTop: spacing(2),
     marginBottom: spacing(4),
@@ -177,19 +142,18 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: radius.full,
-    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarFallbackText: {
-    color: colors.text,
+    color: '#fff',
+    fontFamily: font.display,
     fontSize: 32,
-    fontWeight: '700',
   },
   nickname: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 18,
-    fontWeight: '700',
     marginTop: spacing(3),
   },
   loggedOutWrap: {
@@ -207,29 +171,28 @@ const styles = StyleSheet.create({
   },
   loggedOutTitle: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 16,
-    fontWeight: '700',
     marginTop: spacing(4),
     textAlign: 'center',
   },
   loggedOutText: {
     color: colors.textFaint,
+    fontFamily: font.regular,
     fontSize: 13,
     textAlign: 'center',
     marginTop: spacing(2),
     lineHeight: 18,
   },
   loginButton: {
-    marginTop: spacing(5),
-    backgroundColor: colors.accent,
     borderRadius: radius.full,
     paddingHorizontal: spacing(8),
     paddingVertical: spacing(3),
   },
   loginButtonText: {
-    color: colors.text,
+    color: '#fff',
+    fontFamily: font.heading,
     fontSize: 15,
-    fontWeight: '700',
   },
   section: {
     marginHorizontal: spacing(4),
@@ -256,8 +219,8 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     color: colors.text,
+    fontFamily: font.body,
     fontSize: 15,
-    fontWeight: '500',
   },
   rowLabelDanger: {
     color: colors.accent,

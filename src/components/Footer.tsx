@@ -1,5 +1,5 @@
 import { Text, TouchableOpacity, View, StyleSheet, Linking } from 'react-native'
-import { colors } from '../lib/theme'
+import { colors, font } from '../lib/theme'
 
 export default function Footer() {
   return (
@@ -23,12 +23,15 @@ const styles = StyleSheet.create({
   },
   text: {
     color: colors.textFaint,
-    fontSize: 12,
+    fontFamily: font.mono,
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
   link: {
     color: colors.textDim,
-    fontSize: 12,
-    fontWeight: '600',
+    fontFamily: font.mono,
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
   heart: {
     color: colors.accent,

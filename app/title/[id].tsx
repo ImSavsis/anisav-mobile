@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  FlatList,
   Image,
   Linking,
   Modal,
@@ -18,10 +17,13 @@ import type { CollectionType, Episode, Release, TimecodeItem } from '../../src/l
 import { useAuth } from '../../src/lib/AuthContext'
 import { getAllLocalProgress, saveLocalProgress } from '../../src/lib/localProgress'
 import { isInWishlist, toggleWishlist } from '../../src/lib/wishlist'
-import { colors, radius, spacing } from '../../src/lib/theme'
+import { colors, font, radius, spacing } from '../../src/lib/theme'
 import Loader from '../../src/components/Loader'
 import Chip from '../../src/components/Chip'
 import Player from '../../src/components/Player'
+import Reveal from '../../src/components/Reveal'
+import AnimatedPressable from '../../src/components/AnimatedPressable'
+import AccentGradient from '../../src/components/AccentGradient'
 
 const COLLECTION_LABELS: Record<CollectionType, string> = {
   WATCHING: 'Смотрю',
@@ -228,38 +230,40 @@ export default function TitleDetailScreen() {
             <Chip>{release.year}</Chip>
             <Chip>{release.season?.description}</Chip>
             <Chip>{release.age_rating?.label}</Chip>
-            {release.is_ongoing && <Chip accent>Онгоинг</Chip>}
-            {release.episodes_total != null && <Chip>{release.episodes_total} эп.</Chip>}
+            {release.is_ongoing && <Chip accent mono>Онгоинг</Chip>}
+            {release.episodes_total != null && <Chip mono>{release.episodes_total} эп.</Chip>}
           </View>
 
           <View style={styles.actionsRow}>
             {user && (
-              <Pressable
-                onPress={() => setListOpen(true)}
-                disabled={busy}
-                style={[styles.listButton, collectionType && styles.listButtonActive]}
-              >
-                <Text style={styles.listButtonText}>
-                  {collectionType ? COLLECTION_LABELS[collectionType] : '+ В список'}
-                </Text>
-              </Pressable>
+              <AnimatedPressable haptic onPress={() => setListOpen(true)} disabled={busy}>
+                {collectionType ? (
+                  <View style={[styles.listButton, styles.listButtonActive]}>
+                    <Text style={styles.listButtonText}>{COLLECTION_LABELS[collectionType]}</Text>
+                  </View>
+                ) : (
+                  <AccentGradient style={styles.listButton}>
+                    <Text style={styles.listButtonText}>+ В список</Text>
+                  </AccentGradient>
+                )}
+              </AnimatedPressable>
             )}
             {user && (
-              <Pressable onPress={toggleFavorite} disabled={busy} style={styles.iconButton}>
+              <AnimatedPressable haptic onPress={toggleFavorite} disabled={busy} style={styles.iconButton}>
                 <Ionicons
                   name={isFavorite ? 'heart' : 'heart-outline'}
                   size={18}
                   color={isFavorite ? colors.accent : colors.textDim}
                 />
-              </Pressable>
+              </AnimatedPressable>
             )}
-            <Pressable onPress={handleToggleWishlist} style={styles.iconButton}>
+            <AnimatedPressable haptic onPress={handleToggleWishlist} style={styles.iconButton}>
               <Ionicons
                 name={saved ? 'star' : 'star-outline'}
                 size={18}
-                color={saved ? colors.accent : colors.textDim}
+                color={saved ? colors.accent2 : colors.textDim}
               />
-            </Pressable>
+            </AnimatedPressable>
           </View>
         </View>
       </View>
@@ -292,43 +296,29 @@ export default function TitleDetailScreen() {
       {!!release.episodes?.length && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Серии</Text>
-          <FlatList
-            horizontal
-            data={release.episodes}
-            keyExtractor={(ep) => ep.id}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.episodeList}
-            renderItem={({ item: ep }) => {
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.episodeList}>
+            {release.episodes.map((ep, i) => {
               const tc = timecodes.get(ep.id)
               const isSelected = selectedEp?.id === ep.id
               return (
-                <Pressable
-                  onPress={() => setSelectedEp(ep)}
-                  style={[styles.episodeButton, isSelected && styles.episodeButtonActive]}
-                >
-                  <View style={styles.episodeRow}>
-                    <Text style={styles.episodeLabel}>Серия {ep.ordinal}</Text>
-                    {tc?.is_watched && <Text style={styles.episodeCheck}>✓</Text>}
-                  </View>
-                  {ep.name && (
-                    <Text numberOfLines={1} style={styles.episodeName}>
-                      {ep.name}
-                    </Text>
-                  )}
-                  {tc && !tc.is_watched && ep.duration ? (
-                    <View style={styles.progressTrack}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          { width: `${Math.min(100, (tc.time / ep.duration) * 100)}%` },
-                        ]}
-                      />
-                    </View>
-                  ) : null}
-                </Pressable>
+                <Reveal key={ep.id} index={i % 12}>
+                  <AnimatedPressable
+                    onPress={() => setSelectedEp(ep)}
+                    scaleTo={0.97}
+                    style={isSelected ? undefined : styles.episodeButton}
+                  >
+                    {isSelected ? (
+                      <AccentGradient style={styles.episodeButton}>
+                        <EpisodeContent ep={ep} tc={tc} selected />
+                      </AccentGradient>
+                    ) : (
+                      <EpisodeContent ep={ep} tc={tc} />
+                    )}
+                  </AnimatedPressable>
+                </Reveal>
               )
-            }}
-          />
+            })}
+          </ScrollView>
         </View>
       )}
 
@@ -345,30 +335,22 @@ export default function TitleDetailScreen() {
                   {formatBytes(t.size)} · {t.quality?.description} · {t.seeders} сидов
                 </Text>
               </View>
-              <Pressable onPress={() => Linking.openURL(t.magnet)} style={styles.magnetButton}>
-                <Text style={styles.magnetButtonText}>Magnet</Text>
+              <Pressable onPress={() => Linking.openURL(t.magnet)}>
+                <AccentGradient style={styles.magnetButton}>
+                  <Text style={styles.magnetButtonText}>Magnet</Text>
+                </AccentGradient>
               </Pressable>
             </View>
           ))}
         </View>
       )}
 
-      <Modal
-        visible={listOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setListOpen(false)}
-      >
+      <Modal visible={listOpen} transparent animationType="fade" onRequestClose={() => setListOpen(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setListOpen(false)}>
           <View style={[styles.actionSheet, { paddingBottom: insets.bottom + spacing(4) }]}>
             {(Object.keys(COLLECTION_LABELS) as CollectionType[]).map((type) => (
               <Pressable key={type} onPress={() => pickCollection(type)} style={styles.actionSheetRow}>
-                <Text
-                  style={[
-                    styles.actionSheetText,
-                    collectionType === type && styles.actionSheetTextActive,
-                  ]}
-                >
+                <Text style={[styles.actionSheetText, collectionType === type && styles.actionSheetTextActive]}>
                   {COLLECTION_LABELS[type]}
                 </Text>
               </Pressable>
@@ -388,6 +370,27 @@ export default function TitleDetailScreen() {
   )
 }
 
+function EpisodeContent({ ep, tc, selected }: { ep: Episode; tc?: TimecodeItem; selected?: boolean }) {
+  return (
+    <>
+      <View style={styles.episodeRow}>
+        <Text style={[styles.episodeLabel, selected && styles.episodeLabelActive]}>Серия {ep.ordinal}</Text>
+        {tc?.is_watched && <Text style={styles.episodeCheck}>✓</Text>}
+      </View>
+      {ep.name && (
+        <Text numberOfLines={1} style={[styles.episodeName, selected && styles.episodeNameActive]}>
+          {ep.name}
+        </Text>
+      )}
+      {tc && !tc.is_watched && ep.duration ? (
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${Math.min(100, (tc.time / ep.duration) * 100)}%` }]} />
+        </View>
+      ) : null}
+    </>
+  )
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -401,6 +404,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.textFaint,
+    fontFamily: font.regular,
     fontSize: 14,
   },
   header: {
@@ -421,12 +425,14 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
+    fontFamily: font.display,
     fontSize: 20,
-    fontWeight: '800',
+    letterSpacing: -0.3,
   },
   englishTitle: {
     color: colors.textFaint,
-    fontSize: 12,
+    fontFamily: font.mono,
+    fontSize: 11,
     marginTop: spacing(0.5),
   },
   chipRow: {
@@ -442,7 +448,6 @@ const styles = StyleSheet.create({
     marginTop: spacing(3),
   },
   listButton: {
-    backgroundColor: colors.accent,
     paddingHorizontal: spacing(3),
     paddingVertical: spacing(1.5),
     borderRadius: radius.full,
@@ -452,8 +457,8 @@ const styles = StyleSheet.create({
   },
   listButtonText: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 12,
-    fontWeight: '700',
   },
   iconButton: {
     width: 32,
@@ -472,6 +477,7 @@ const styles = StyleSheet.create({
   },
   description: {
     color: colors.textDim,
+    fontFamily: font.regular,
     fontSize: 13,
     lineHeight: 19,
     paddingHorizontal: spacing(4),
@@ -486,8 +492,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 17,
-    fontWeight: '700',
+    letterSpacing: -0.2,
     marginBottom: spacing(2),
     paddingHorizontal: spacing(4),
   },
@@ -501,9 +508,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing(3),
   },
-  episodeButtonActive: {
-    backgroundColor: colors.accent,
-  },
   episodeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -511,17 +515,25 @@ const styles = StyleSheet.create({
   },
   episodeLabel: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 13,
-    fontWeight: '700',
+  },
+  episodeLabelActive: {
+    color: '#fff',
   },
   episodeCheck: {
     color: colors.text,
+    fontFamily: font.body,
     fontSize: 11,
   },
   episodeName: {
     color: colors.textFaint,
+    fontFamily: font.regular,
     fontSize: 11,
     marginTop: spacing(1),
+  },
+  episodeNameActive: {
+    color: 'rgba(255,255,255,0.82)',
   },
   progressTrack: {
     height: 3,
@@ -552,24 +564,24 @@ const styles = StyleSheet.create({
   },
   torrentLabel: {
     color: colors.text,
+    fontFamily: font.medium,
     fontSize: 13,
-    fontWeight: '600',
   },
   torrentMeta: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontFamily: font.mono,
+    fontSize: 10,
     marginTop: spacing(1),
   },
   magnetButton: {
-    backgroundColor: colors.accent,
     paddingHorizontal: spacing(3),
     paddingVertical: spacing(1.5),
     borderRadius: radius.full,
   },
   magnetButtonText: {
-    color: colors.text,
+    color: '#fff',
+    fontFamily: font.heading,
     fontSize: 11,
-    fontWeight: '700',
   },
   modalBackdrop: {
     flex: 1,
@@ -590,20 +602,22 @@ const styles = StyleSheet.create({
   },
   actionSheetText: {
     color: colors.text,
+    fontFamily: font.body,
     fontSize: 15,
   },
   actionSheetTextActive: {
     color: colors.accent,
-    fontWeight: '700',
+    fontFamily: font.heading,
   },
   actionSheetRemove: {
     color: '#ff6b6b',
+    fontFamily: font.body,
     fontSize: 15,
   },
   actionSheetCancel: {
     color: colors.textFaint,
+    fontFamily: font.heading,
     fontSize: 15,
-    fontWeight: '600',
     textAlign: 'center',
   },
 })

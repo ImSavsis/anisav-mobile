@@ -5,9 +5,10 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { Release } from '../src/lib/types'
 import { getWishlist, onWishlistChange } from '../src/lib/wishlist'
-import { colors, spacing } from '../src/lib/theme'
+import { colors, font, spacing } from '../src/lib/theme'
 import AnimeCard from '../src/components/AnimeCard'
 import Loader from '../src/components/Loader'
+import Reveal from '../src/components/Reveal'
 
 export default function WishlistScreen() {
   const router = useRouter()
@@ -56,9 +57,7 @@ export default function WishlistScreen() {
 
       {items && items.length === 0 && (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>
-            Пока пусто — нажми на звёздочку у тайтла, чтобы добавить сюда
-          </Text>
+          <Text style={styles.emptyText}>Пока пусто — нажми на звёздочку у тайтла, чтобы добавить сюда</Text>
         </View>
       )}
 
@@ -73,10 +72,12 @@ export default function WishlistScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />
           }
-          renderItem={({ item }) =>
+          renderItem={({ item, index }) =>
             item ? (
               <View style={styles.gridItem}>
-                <AnimeCard release={item} onPress={() => router.push(`/title/${item.alias || item.id}`)} />
+                <Reveal index={index % (numColumns * 3)}>
+                  <AnimeCard release={item} onPress={() => router.push(`/title/${item.alias || item.id}`)} />
+                </Reveal>
               </View>
             ) : (
               <View style={styles.gridItem} />
@@ -110,12 +111,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 19,
-    fontWeight: '700',
   },
   headerSubtitle: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontFamily: font.mono,
+    fontSize: 10,
     marginTop: spacing(0.5),
   },
   empty: {
@@ -126,6 +128,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: colors.textFaint,
+    fontFamily: font.regular,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,

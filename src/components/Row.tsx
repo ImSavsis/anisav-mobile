@@ -1,8 +1,9 @@
-import { FlatList, StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import type { Release } from '../lib/types'
-import { colors, spacing } from '../lib/theme'
+import { colors, font, spacing } from '../lib/theme'
 import AnimeCard from './AnimeCard'
+import Reveal from './Reveal'
 
 interface RowProps {
   title: string
@@ -19,21 +20,13 @@ export default function Row({ title, releases }: RowProps) {
   return (
     <View style={styles.section}>
       <Text style={styles.heading}>{title}</Text>
-      <FlatList
-        horizontal
-        data={releases}
-        keyExtractor={(item) => String(item.id)}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <AnimeCard
-              release={item}
-              onPress={() => router.push(`/title/${item.alias || item.id}`)}
-            />
-          </View>
-        )}
-      />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
+        {releases.map((item, i) => (
+          <Reveal key={item.id} index={i} style={styles.item}>
+            <AnimeCard release={item} onPress={() => router.push(`/title/${item.alias || item.id}`)} />
+          </Reveal>
+        ))}
+      </ScrollView>
     </View>
   )
 }
@@ -44,14 +37,15 @@ const styles = StyleSheet.create({
   },
   heading: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 17,
-    fontWeight: '700',
+    letterSpacing: -0.2,
     marginBottom: spacing(2),
     paddingHorizontal: spacing(4),
   },
   list: {
-    paddingHorizontal: spacing(4),
     gap: spacing(3),
+    paddingHorizontal: spacing(4),
   },
   item: {
     width: CARD_WIDTH,

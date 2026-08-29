@@ -1,24 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  FlatList,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native'
+import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { CollectionType, Release } from '../../src/lib/types'
 import { api } from '../../src/lib/api'
 import { useAuth } from '../../src/lib/AuthContext'
-import { colors, spacing } from '../../src/lib/theme'
+import { colors, font, spacing } from '../../src/lib/theme'
 import AnimeCard from '../../src/components/AnimeCard'
 import Loader from '../../src/components/Loader'
 import Chip from '../../src/components/Chip'
+import Reveal from '../../src/components/Reveal'
+import AnimatedPressable from '../../src/components/AnimatedPressable'
+import AccentGradient from '../../src/components/AccentGradient'
 
 type TabKey = CollectionType | 'FAVORITES'
 
@@ -41,8 +35,7 @@ export default function MyListsScreen() {
   const [refreshing, setRefreshing] = useState(false)
 
   const load = useCallback((currentTab: TabKey) => {
-    const req =
-      currentTab === 'FAVORITES' ? api.favoritesList(1, 48) : api.collectionList(currentTab, 1, 48)
+    const req = currentTab === 'FAVORITES' ? api.favoritesList(1, 48) : api.collectionList(currentTab, 1, 48)
     return req.then((res) => setReleases(res.data)).catch(() => setReleases([]))
   }, [])
 
@@ -81,19 +74,17 @@ export default function MyListsScreen() {
       {!authLoading && !user && (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>Войдите, чтобы видеть свои списки</Text>
-          <Pressable style={styles.loginButton} onPress={() => router.push('/login')}>
-            <Text style={styles.loginButtonText}>Войти</Text>
-          </Pressable>
+          <AnimatedPressable haptic onPress={() => router.push('/login')}>
+            <AccentGradient style={styles.loginButton}>
+              <Text style={styles.loginButtonText}>Войти</Text>
+            </AccentGradient>
+          </AnimatedPressable>
         </View>
       )}
 
       {!authLoading && user && (
         <>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabs}
-          >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
             {TABS.map((t) => (
               <Pressable key={t.key} onPress={() => setTab(t.key)}>
                 <Chip accent={tab === t.key}>{t.label}</Chip>
@@ -118,17 +109,14 @@ export default function MyListsScreen() {
               columnWrapperStyle={styles.row}
               contentContainerStyle={[styles.grid, { paddingBottom: insets.bottom + spacing(6) }]}
               refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  tintColor={colors.accent}
-                  colors={[colors.accent]}
-                />
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />
               }
-              renderItem={({ item }) =>
+              renderItem={({ item, index }) =>
                 item ? (
                   <View style={styles.gridItem}>
-                    <AnimeCard release={item} onPress={() => router.push(`/title/${item.alias || item.id}`)} />
+                    <Reveal index={index % (numColumns * 3)}>
+                      <AnimeCard release={item} onPress={() => router.push(`/title/${item.alias || item.id}`)} />
+                    </Reveal>
                   </View>
                 ) : (
                   <View style={styles.gridItem} />
@@ -164,8 +152,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 19,
-    fontWeight: '700',
   },
   tabs: {
     gap: spacing(2),
@@ -181,20 +169,20 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: colors.textFaint,
+    fontFamily: font.regular,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
   },
   loginButton: {
-    backgroundColor: colors.accent,
     paddingHorizontal: spacing(6),
     paddingVertical: spacing(3),
     borderRadius: 999,
   },
   loginButtonText: {
-    color: colors.text,
+    color: '#fff',
+    fontFamily: font.heading,
     fontSize: 14,
-    fontWeight: '700',
   },
   grid: {
     padding: spacing(4),

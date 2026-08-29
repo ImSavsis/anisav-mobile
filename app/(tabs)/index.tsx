@@ -1,26 +1,53 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Animated, FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { Image, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  Extrapolation,
+} from 'react-native-reanimated'
 import { api, imageUrl } from '../../src/lib/api'
 import { getContinueWatching, ContinueWatchingItem } from '../../src/lib/continueWatching'
 import type { Release, ScheduleDay } from '../../src/lib/types'
-import { colors, radius, spacing } from '../../src/lib/theme'
+import { colors, font, radius, spacing } from '../../src/lib/theme'
+import { useReduceMotion } from '../../src/lib/useReduceMotion'
 import Row from '../../src/components/Row'
-import Loader from '../../src/components/Loader'
 import Footer from '../../src/components/Footer'
+import { HomeSkeleton } from '../../src/components/Skeleton'
+import Reveal from '../../src/components/Reveal'
+import AnimatedPressable from '../../src/components/AnimatedPressable'
+import AccentGradient from '../../src/components/AccentGradient'
+
+const HERO_HEIGHT = 460
 
 export default function HomeScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const reduced = useReduceMotion()
   const [latest, setLatest] = useState<Release[] | null>(null)
   const [recommended, setRecommended] = useState<Release[]>([])
   const [today, setToday] = useState<ScheduleDay[]>([])
   const [continueWatching, setContinueWatching] = useState<ContinueWatchingItem[]>([])
   const [refreshing, setRefreshing] = useState(false)
-  const heroOpacity = useRef(new Animated.Value(0)).current
-  const heroTranslate = useRef(new Animated.Value(16)).current
-  const buttonScale = useRef(new Animated.Value(1)).current
+  const scrollY = useSharedValue(0)
+
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y
+  })
+
+  const heroStyle = useAnimatedStyle(() => {
+    if (reduced) return {}
+    const y = scrollY.value
+    return {
+      transform: [
+        { translateY: interpolate(y, [-120, 0, 120], [-40, 0, 34], Extrapolation.CLAMP) },
+        { scale: interpolate(y, [-120, 0], [1.15, 1], Extrapolation.CLAMP) },
+      ],
+    }
+  })
 
   const load = useCallback(async () => {
     const [latestRes, recommendedRes, scheduleRes, continueRes] = await Promise.all([
@@ -39,64 +66,42 @@ export default function HomeScreen() {
     load()
   }, [load])
 
-  useEffect(() => {
-    if (!latest) return
-    heroOpacity.setValue(0)
-    heroTranslate.setValue(16)
-    Animated.parallel([
-      Animated.timing(heroOpacity, { toValue: 1, duration: 450, useNativeDriver: true }),
-      Animated.timing(heroTranslate, { toValue: 0, duration: 450, useNativeDriver: true }),
-    ]).start()
-  }, [latest, heroOpacity, heroTranslate])
-
   async function onRefresh() {
     setRefreshing(true)
     await load()
     setRefreshing(false)
   }
 
-  function pressButtonIn() {
-    Animated.spring(buttonScale, { toValue: 0.94, useNativeDriver: true, speed: 50 }).start()
-  }
-
-  function pressButtonOut() {
-    Animated.spring(buttonScale, { toValue: 1, useNativeDriver: true, speed: 50 }).start()
-  }
-
-  if (!latest) {
-    return <Loader label="Загрузка..." />
-  }
+  if (!latest) return <HomeSkeleton />
 
   const hero = latest[0]
 
   return (
-    <ScrollView
+    <Animated.ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: spacing(4) }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + spacing(24) }}
       showsVerticalScrollIndicator={false}
+      onScroll={scrollHandler}
+      scrollEventThrottle={16}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
       }
     >
       {hero && (
-        <Animated.View
-          style={[
-            styles.hero,
-            { opacity: heroOpacity, transform: [{ translateY: heroTranslate }] },
-          ]}
-        >
-          <Image
+        <View style={styles.hero}>
+          <Animated.Image
             source={{ uri: imageUrl(hero.poster?.optimized?.preview || hero.poster?.preview) }}
-            style={styles.heroImage}
+            style={[styles.heroImage, heroStyle]}
             resizeMode="cover"
           />
           <View style={styles.heroOverlay} />
           <View style={styles.heroOverlayBottom} />
 
-          <View style={styles.heroContent}>
-            <View style={styles.heroBadge}>
+          <View style={[styles.heroContent, { paddingTop: insets.top + spacing(4) }]}>
+            <View style={{ flex: 1 }} />
+            <AccentGradient style={styles.heroBadge}>
               <Text style={styles.heroBadgeText}>Новинка</Text>
-            </View>
+            </AccentGradient>
             <Text style={styles.heroTitle} numberOfLines={2}>
               {hero.name.main}
             </Text>
@@ -105,56 +110,50 @@ export default function HomeScreen() {
                 {hero.description}
               </Text>
             )}
-            <Pressable
-              onPress={() => router.push(`/title/${hero.alias || hero.id}`)}
-              onPressIn={pressButtonIn}
-              onPressOut={pressButtonOut}
-            >
-              <Animated.View style={[styles.heroButton, { transform: [{ scale: buttonScale }] }]}>
-                <Text style={styles.heroButtonText}>Смотреть</Text>
-              </Animated.View>
-            </Pressable>
+            <View style={{ alignSelf: 'flex-start', marginTop: spacing(4) }}>
+              <AnimatedPressable haptic onPress={() => router.push(`/title/${hero.alias || hero.id}`)}>
+                <AccentGradient style={styles.heroButton}>
+                  <Text style={styles.heroButtonText}>Смотреть</Text>
+                </AccentGradient>
+              </AnimatedPressable>
+            </View>
           </View>
-        </Animated.View>
+        </View>
       )}
 
       {continueWatching.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Продолжить просмотр</Text>
-          <FlatList
-            data={continueWatching}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.episode.id}
-            contentContainerStyle={{ paddingHorizontal: spacing(4), gap: spacing(3) }}
-            renderItem={({ item }) => (
-              <Pressable
-                style={styles.continueCard}
-                onPress={() => router.push(`/title/${item.release.alias || item.release.id}`)}
-              >
-                <Image
-                  source={{
-                    uri: imageUrl(item.release.poster?.optimized?.preview || item.release.poster?.preview),
-                  }}
-                  style={styles.continueImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.continueOverlay}>
-                  <Text style={styles.continueEpisode}>Серия {item.episode.ordinal}</Text>
-                  {!!item.episode.duration && (
-                    <View style={styles.continueBarTrack}>
-                      <View
-                        style={[
-                          styles.continueBarFill,
-                          { width: `${Math.min(100, (item.time / item.episode.duration) * 100)}%` },
-                        ]}
-                      />
-                    </View>
-                  )}
-                </View>
-              </Pressable>
-            )}
-          />
+          <View style={styles.continueRow}>
+            {continueWatching.map((item, i) => (
+              <Reveal key={item.episode.id} index={i} style={styles.continueCard}>
+                <AnimatedPressable
+                  onPress={() => router.push(`/title/${item.release.alias || item.release.id}`)}
+                >
+                  <Image
+                    source={{
+                      uri: imageUrl(item.release.poster?.optimized?.preview || item.release.poster?.preview),
+                    }}
+                    style={styles.continueImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.continueOverlay}>
+                    <Text style={styles.continueEpisode}>СЕРИЯ {item.episode.ordinal}</Text>
+                    {!!item.episode.duration && (
+                      <View style={styles.continueBarTrack}>
+                        <AccentGradient
+                          style={[
+                            styles.continueBarFill,
+                            { width: `${Math.min(100, (item.time / item.episode.duration) * 100)}%` },
+                          ]}
+                        />
+                      </View>
+                    )}
+                  </View>
+                </AnimatedPressable>
+              </Reveal>
+            ))}
+          </View>
         </View>
       )}
 
@@ -163,7 +162,7 @@ export default function HomeScreen() {
       <Row title="Рекомендуем" releases={recommended} />
 
       <Footer />
-    </ScrollView>
+    </Animated.ScrollView>
   )
 }
 
@@ -177,9 +176,16 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 17,
-    fontWeight: '700',
+    letterSpacing: -0.2,
     marginBottom: spacing(3),
+    paddingHorizontal: spacing(4),
+  },
+  continueRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing(3),
     paddingHorizontal: spacing(4),
   },
   continueCard: {
@@ -200,8 +206,9 @@ const styles = StyleSheet.create({
   },
   continueEpisode: {
     color: colors.text,
-    fontSize: 11,
-    fontWeight: '600',
+    fontFamily: font.mono,
+    fontSize: 9,
+    letterSpacing: 0.4,
     marginBottom: spacing(1),
   },
   continueBarTrack: {
@@ -212,13 +219,12 @@ const styles = StyleSheet.create({
   },
   continueBarFill: {
     height: '100%',
-    backgroundColor: colors.accent,
   },
   hero: {
     width: '100%',
-    aspectRatio: 3 / 4,
-    maxHeight: 460,
+    height: HERO_HEIGHT,
     backgroundColor: colors.surface,
+    overflow: 'hidden',
   },
   heroImage: {
     position: 'absolute',
@@ -235,7 +241,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(18,18,18,0.35)',
+    backgroundColor: 'rgba(10,10,19,0.3)',
   },
   heroOverlayBottom: {
     position: 'absolute',
@@ -244,17 +250,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: '65%',
     backgroundColor: colors.background,
-    opacity: 0.85,
+    opacity: 0.88,
   },
   heroContent: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
+    top: 0,
     padding: spacing(4),
   },
   heroBadge: {
-    backgroundColor: colors.accent,
     paddingHorizontal: spacing(2),
     paddingVertical: spacing(1),
     borderRadius: radius.sm,
@@ -262,34 +268,34 @@ const styles = StyleSheet.create({
     marginBottom: spacing(2),
   },
   heroBadgeText: {
-    color: colors.text,
-    fontSize: 11,
-    fontWeight: '700',
+    color: '#fff',
+    fontFamily: font.mono,
+    fontSize: 10,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
   heroTitle: {
     color: colors.text,
+    fontFamily: font.display,
     fontSize: 26,
-    fontWeight: '800',
+    letterSpacing: -0.4,
     lineHeight: 30,
   },
   heroDescription: {
     marginTop: spacing(2),
     color: colors.textDim,
+    fontFamily: font.regular,
     fontSize: 14,
     lineHeight: 19,
   },
   heroButton: {
-    marginTop: spacing(4),
-    alignSelf: 'flex-start',
-    backgroundColor: colors.accent,
     paddingHorizontal: spacing(6),
     paddingVertical: spacing(3),
     borderRadius: radius.full,
   },
   heroButtonText: {
-    color: colors.text,
+    color: '#fff',
+    fontFamily: font.heading,
     fontSize: 15,
-    fontWeight: '700',
   },
 })

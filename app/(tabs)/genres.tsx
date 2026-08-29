@@ -1,48 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  Animated,
-  FlatList,
-  Image,
-  LayoutAnimation,
-  Platform,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  UIManager,
-  View,
-} from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { FlatList, Image, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { api, imageUrl } from '../../src/lib/api'
 import type { Genre } from '../../src/lib/types'
-import { colors, radius, spacing } from '../../src/lib/theme'
+import { colors, font, radius, spacing } from '../../src/lib/theme'
 import Loader from '../../src/components/Loader'
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true)
-}
+import Reveal from '../../src/components/Reveal'
+import AnimatedPressable from '../../src/components/AnimatedPressable'
 
 interface GenreTileProps {
   genre: Genre
+  index: number
   onPress: () => void
 }
 
-function GenreTile({ genre, onPress }: GenreTileProps) {
-  const scale = useRef(new Animated.Value(1)).current
+function GenreTile({ genre, index, onPress }: GenreTileProps) {
   const image = imageUrl(genre.image?.optimized?.preview || genre.image?.preview)
 
-  function pressIn() {
-    Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, speed: 50 }).start()
-  }
-
-  function pressOut() {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50 }).start()
-  }
-
   return (
-    <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={styles.tileWrap}>
-      <Animated.View style={[styles.tile, { transform: [{ scale }] }]}>
+    <Reveal index={index} style={styles.tileWrap}>
+      <AnimatedPressable onPress={onPress} scaleTo={0.97} style={styles.tile}>
         {image && <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />}
         <View style={styles.overlay} />
         <View style={styles.overlayBottom} />
@@ -50,12 +28,10 @@ function GenreTile({ genre, onPress }: GenreTileProps) {
           <Text numberOfLines={2} style={styles.name}>
             {genre.name}
           </Text>
-          {genre.total_releases != null && (
-            <Text style={styles.count}>{genre.total_releases} тайтлов</Text>
-          )}
+          {genre.total_releases != null && <Text style={styles.count}>{genre.total_releases} тайтлов</Text>}
         </View>
-      </Animated.View>
-    </Pressable>
+      </AnimatedPressable>
+    </Reveal>
   )
 }
 
@@ -67,9 +43,7 @@ export default function GenresScreen() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.genres()
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-      setGenres(data)
+      setGenres(await api.genres())
     } catch {
       setGenres([])
     }
@@ -96,18 +70,17 @@ export default function GenresScreen() {
       columnWrapperStyle={styles.row}
       contentContainerStyle={[
         styles.list,
-        { paddingTop: insets.top + spacing(4), paddingBottom: insets.bottom + spacing(8) },
+        { paddingTop: insets.top + spacing(4), paddingBottom: insets.bottom + spacing(24) },
       ]}
       refreshControl={
         <RefreshControl tintColor={colors.accent} refreshing={refreshing} onRefresh={onRefresh} />
       }
       ListHeaderComponent={<Text style={styles.title}>Жанры</Text>}
-      renderItem={({ item }) => (
+      renderItem={({ item, index }) => (
         <GenreTile
           genre={item}
-          onPress={() =>
-            router.push({ pathname: '/(tabs)/catalog', params: { genre: String(item.id) } })
-          }
+          index={index % 12}
+          onPress={() => router.push({ pathname: '/(tabs)/catalog', params: { genre: String(item.id) } })}
         />
       )}
     />
@@ -124,8 +97,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
+    fontFamily: font.display,
     fontSize: 22,
-    fontWeight: '800',
+    letterSpacing: -0.3,
     marginBottom: spacing(4),
   },
   row: {
@@ -173,12 +147,13 @@ const styles = StyleSheet.create({
   },
   name: {
     color: colors.text,
+    fontFamily: font.heading,
     fontSize: 14,
-    fontWeight: '700',
   },
   count: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontFamily: font.mono,
+    fontSize: 10,
     marginTop: spacing(0.5),
   },
 })

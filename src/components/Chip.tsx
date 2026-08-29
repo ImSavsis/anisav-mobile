@@ -1,40 +1,62 @@
 import { ReactNode } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { colors, radius, spacing } from '../lib/theme'
+import { colors, font, radius, spacing } from '../lib/theme'
+import AccentGradient from './AccentGradient'
 
 interface ChipProps {
   children: ReactNode
   accent?: boolean
+  mono?: boolean
 }
 
-export default function Chip({ children, accent }: ChipProps) {
+export default function Chip({ children, accent, mono }: ChipProps) {
+  const textStyle = [styles.text, mono && styles.textMono, accent && styles.textAccent]
+
+  if (accent) {
+    return (
+      <AccentGradient style={[styles.chip, mono && styles.chipMono]}>
+        <Text style={textStyle}>{children}</Text>
+      </AccentGradient>
+    )
+  }
+
   return (
-    <View style={[styles.chip, accent && styles.chipAccent]}>
-      <Text style={[styles.text, accent && styles.textAccent]}>{children}</Text>
+    <View style={[styles.chip, mono && styles.chipMono, styles.chipDefault]}>
+      <Text style={textStyle}>{children}</Text>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   chip: {
-    backgroundColor: colors.surfaceRaised,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
     paddingHorizontal: spacing(3),
     paddingVertical: spacing(1.5),
     borderRadius: radius.full,
     alignSelf: 'flex-start',
   },
-  chipAccent: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+  chipMono: {
+    paddingHorizontal: spacing(1.5),
+    paddingVertical: spacing(0.75),
+    borderRadius: radius.sm,
+  },
+  chipDefault: {
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   text: {
+    fontFamily: font.body,
     color: colors.textDim,
     fontSize: 12,
-    fontWeight: '600',
+  },
+  textMono: {
+    fontFamily: font.mono,
+    fontSize: 9,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: colors.text,
   },
   textAccent: {
-    color: colors.text,
+    color: '#fff',
   },
 })
